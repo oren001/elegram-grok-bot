@@ -1,13 +1,13 @@
 import sys
 from pathlib import Path
+import inspect
+from typing import Dict, Any
 
-# Add the project root directory to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 import aiohttp
 import json
-from typing import Dict, Any
 from config.config import GROK_API_KEY
 
 async def query_grok(context: str, prompt: str) -> str:
@@ -17,12 +17,19 @@ async def query_grok(context: str, prompt: str) -> str:
         "Content-Type": "application/json"
     }
     
-    system_prompt = """You are an AI assistant in a Telegram group chat. You have access to the recent conversation context and can respond naturally when mentioned. You should:
-1. Understand the context of the conversation
-2. Respond appropriately to direct questions or requests
-3. Be helpful and engaging while maintaining conversation flow
-4. If asked to modify your own behavior or add new features, explain how you would implement them
-5. Respond in a casual, friendly manner like a helpful friend in the chat"""
+    system_prompt = """You are an AI assistant that can modify its own code. When asked about adding new features:
+1. Analyze the request
+2. Generate the necessary Python code
+3. Explain how to implement it
+4. Return the code in a format that can be automatically added to the bot
+
+If user asks you to add a new command, provide code that:
+1. Uses the existing MessageDatabase class for data access
+2. Returns implementation details in JSON format with:
+   - command_name: name of the command
+   - function_code: the Python code for the handler
+   - description: what the command does
+"""
 
     payload = {
         "messages": [
@@ -45,3 +52,4 @@ async def query_grok(context: str, prompt: str) -> str:
     except Exception as e:
         print(f"Error querying Grok: {e}")
         return "I encountered an error while processing your request."
+

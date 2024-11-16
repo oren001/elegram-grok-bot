@@ -2,7 +2,6 @@ import logging
 import sys
 from pathlib import Path
 
-# Add the project root directory to Python path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
@@ -13,6 +12,7 @@ from config.config import TELEGRAM_TOKEN, BOT_USERNAME, DB_NAME, LOG_FORMAT, LOG
 from src.database.message_store import MessageDatabase
 from src.handlers.grok_handler import query_grok
 from src.handlers.command_manager import CommandManager
+from src.handlers.code_handler import CodeHandler
 
 # Configure logging
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
@@ -23,21 +23,7 @@ db = MessageDatabase(DB_NAME)
 
 # Will be initialized in main()
 command_manager = None
-
-async def handle_learn(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /learn command to add new commands"""
-    if not update.message or not context.args or len(context.args) < 2:
-        await update.message.reply_text(
-            "Usage: /learn command_name command_response\n"
-            "Example: /learn hello Hello, I'm your friendly bot!"
-        )
-        return
-
-    command_name = context.args[0]
-    command_response = " ".join(context.args[1:])
-    
-    result = await command_manager.add_command(command_name, command_response)
-    await update.message.reply_text(result)
+code_handler = None
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text:
@@ -56,6 +42,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Only respond if bot is mentioned
     if is_bot_mention:
+        # Check if it's a programming request
+        programming_keywords = ['create a command', 'add command', 'make a command']
+        is_programming_request = any(keyword in message_text.lower() for keyword in programming_keywords)
+        
         # Get recent conversation context
         recent_messages = db.get_recent_context(chat_id)
         context_text = "\n".join([f"{username}: {text}" for username, text in recent_messages[::-1]])
@@ -66,22 +56,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Get response from Grok
         response = await query_grok(context_text, prompt)
         
-        # Send response
+        if is_programming_request:
+            # Try to parse and implement the code
+            parsed = code_handler.parse_grok_response(response)
+            if parsed and 'command_name' in parsed and 'function_code' in parsed:
+                result = await code_handler.implement_command(
+                    parsed['command_name'],
+                    parsed['function_code']
+                )
+                await update.message.reply_text(
+                    f"{response}\n\nImplementation result: {result}",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+        
+        # Send normal response
         await update.message.reply_text(
             response,
             parse_mode=ParseMode.MARKDOWN
         )
 
 def main():
-    global command_manager
+    global command_manager, code_handler
     application = Application.builder().token(TELEGRAM_TOKEN).build()
     
-    # Initialize command manager
+    # Initialize handlers
     command_manager = CommandManager(application)
+    code_handler = CodeHandler(application, db)
     
     # Add handlers
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(CommandHandler("learn", handle_learn))
     
     print("Bot started! Press Ctrl+C to stop.")
     application.run_polling()
