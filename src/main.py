@@ -1,10 +1,17 @@
 import logging
+import sys
+from pathlib import Path
+
+# Add the project root directory to Python path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode
 from config.config import TELEGRAM_TOKEN, BOT_USERNAME, DB_NAME, LOG_FORMAT, LOG_LEVEL
-from database.message_store import MessageDatabase
-from handlers.grok_handler import query_grok
+from src.database.message_store import MessageDatabase
+from src.handlers.grok_handler import query_grok
 
 # Configure logging
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
