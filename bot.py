@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Bot token and API keys
-TELEGRAM_TOKEN = '7641046734:AAHzEBQOXuXHW4D-VQkcwUWy3us8fDUpeiw'
+TELEGRAM_TOKEN = '8128441937:AAH8fcknTZiqNWk1Iq5YfxHHev6kqdT2_Qk'
 GROK_API_KEY = 'xai-LgvWmftz4Gwk9z9rQwoGVn4n3WNg4SubdoeSLBllbq9nxHilHT8p3WMfVdCKRBrqYsTyhf8KYJI5NMRs'
 BOT_USERNAME = '@ourdudebot'
 
